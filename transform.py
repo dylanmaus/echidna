@@ -10,6 +10,8 @@ class Extract:
         self.sheet_name = sheet_name
         self.sort_columns = ['MRN', 'ORDER', 'ISO. COMM']
         self.keep_columns = ['ORDER', 'LAST', 'FIRST', 'MRN', 'CDATE', 'WARD', 'SOURCE', 'SITE', 'TEST NAME', 'ORG', 'ISO. COMM', 'Drug Name', 'Drug Result']
+        self.drug_column = 'Drug Name'
+        self.drug_names = []
         self.data = []
 
         self.extract()
@@ -18,6 +20,9 @@ class Extract:
         file = pd.ExcelFile(path)
         df = pd.read_excel(file, sheet_name=sheet_name)
         return df
+
+    def get_unique_names(self, df: pd.DataFrame):
+        self.unique_names.extend(df[self.unique_column].unique().tolist)
 
     def drop_columns(self, df):
         return df[df.columns.intersection(self.keep_columns)]
@@ -30,22 +35,38 @@ class Extract:
             for file in files:
                 path = os.path.join(root, file)
                 df = self.read_excel(path, self.sheet_name)
+                self.drug_names.extend(df[self.drug_column].tolist())
                 df = self.drop_columns(df)
                 self.sort(df)
+                df.reset_index(drop=True, inplace=True)
                 self.data.append(df)
 
 
-def get_unique_names(df_list: list[pd.DataFrame], column_name: str):
-    names = []
-    for df in df_list:
-        names.extend(df[column_name].tolist())
-    names = pd.unique(names).tolist()
-    return names
+class Transform:
+    def __init__(self, df_list):
+        self.df_list = df_list
+
+        self.transform()
+
+    def append_key_column(self, df):
+        df['key'] = df['ORDER'].astype(str) + '-' + df['MRN'].astype(str) + '-' + df['ISO. COMM'].astype(str)
+
+    def transform(self):
+        for df in self.df_list:
+            self.append_key_column(df)
+
 
 def main(args):
     column_names = ['ORDER', 'LAST', 'FIRST', 'MRN', 'CDATE', 'WARD', 'SOURCE', 'SITE', 'TEST NAME', 'ORG', 'ISO. COMM']
 
     extract = Extract(args.data_dir, args.sheet_name)
+    transform = Transform(extract.data)
+
+    drug_names = pd.unique(extract.drug_names).tolist()
+
+    import pdb
+    pdb.set_trace()
+
 
 
     # output_df = pd.DataFrame(columns=column_names)
