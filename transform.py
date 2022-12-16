@@ -55,6 +55,11 @@ class Transform:
         for df in self.df_list:
             self.append_key_column(df)
 
+def flatten_record(df):
+    base_record = df.to_dict(orient='records')[0]
+    drug_record = dict(zip(df['Drug Name'], df['Drug Result']))
+    record = {**base_record, **drug_record}
+    return record
 
 def main(args):
     column_names = ['ORDER', 'LAST', 'FIRST', 'MRN', 'CDATE', 'WARD', 'SOURCE', 'SITE', 'TEST NAME', 'ORG', 'ISO. COMM']
