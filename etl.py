@@ -42,13 +42,11 @@ class Extract:
 
 class Transform:
     def __init__(self, data):
-        self.data = data
+        self.transformed_data = []
         self.sort_columns = ['MRN', 'ORDER', 'ISO. COMM']
-        self.keep_columns = ['ORDER', 'LAST', 'FIRST', 'MRN', 'CDATE', 'SOURCE', 'SITE', 'TEST NAME', 'ORG', 'ISO. COMM', 'Drug Name', 'Drug Result']
+        self.keep_columns = ['ORDER', 'LAST', 'FIRST', 'MRN', 'CDATE', 'WARD', 'SOURCE', 'SITE', 'TEST NAME', 'ORG', 'ISO. COMM', 'Drug Name', 'Drug Result']
 
-        self.transform()
-
-        print(self.data[0].head())
+        self.transform(data)
 
     def drop_columns(self, df):
         return df[df.columns.intersection(self.keep_columns)]
@@ -60,35 +58,31 @@ class Transform:
     def append_key_column(self, df):
         df['key'] = df['ORDER'].astype(str) + '-' + df['MRN'].astype(str) + '-' + df['ISO. COMM'].astype(str)
 
-    def transform(self):
-        for df in self.data:
-            df = self.drop_columns(df)
-            self.sort(df)
-            self.append_key_column(df)
-            # import pdb
-            # pdb.set_trace()
-        print(self.data[0].head())
+    def flatten_record(self, df):
+        base_record = df.iloc[:, :11].to_dict(orient='records')[0]
+        drug_record = dict(zip(df['Drug Name'], df['Drug Result']))
+        record = {**base_record, **drug_record}
+        return record
 
-def flatten_record(df):
-    base_record = df.iloc[:, :11].to_dict(orient='records')[0]
-    drug_record = dict(zip(df['Drug Name'], df['Drug Result']))
-    record = {**base_record, **drug_record}
-    return record
+    def transform(self, data):
+        for df in data:
+            tmp_df = self.drop_columns(df)
+            self.sort(tmp_df)
+            self.append_key_column(tmp_df)
+            tmp_series = tmp_df.groupby('key').apply(self.flatten_record)
+            tmp_series.reset_index(drop=True, inplace=True)
+            tmp_df = pd.DataFrame(tmp_series)
+            tmp_df.columns = ['records']
+            self.transformed_data.extend(tmp_df['records'].tolist())
+
 
 def main(args):
-
     extract = Extract(args.data_dir, args.sheet_name)
     transfrom = Transform(extract.data)
+    records = transfrom.transformed_data
 
-    df1 = extract.data[0]
-    df2 = transfrom.data[0]
-    print(df1.head())
-    print(df2.head())
-    df2.groupby('key').apply(flatten_record)
-
-
-    import pdb
-    pdb.set_trace()
+    df = pd.DataFrame(records)
+    df.to_excel(args.output_name, index=False)
 
 
 if __name__ == '__main__':
