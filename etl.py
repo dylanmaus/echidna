@@ -1,7 +1,9 @@
 import os
+import copy
 import argparse
 
 import pandas as pd
+# pd.options.mode.chained_assignment = None
 
 '''
 read into df
@@ -66,7 +68,7 @@ class Transform:
 
     def transform(self, data):
         for df in data:
-            tmp_df = self.drop_columns(df)
+            tmp_df = copy.deepcopy(self.drop_columns(df))
             self.sort(tmp_df)
             self.append_key_column(tmp_df)
             tmp_series = tmp_df.groupby('key').apply(self.flatten_record)
@@ -82,6 +84,7 @@ def main(args):
     records = transfrom.transformed_data
 
     df = pd.DataFrame(records)
+    transfrom.sort(df)
     df.to_excel(args.output_name, index=False)
 
 
