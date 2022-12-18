@@ -3,23 +3,7 @@ import copy
 import argparse
 
 import pandas as pd
-# pd.options.mode.chained_assignment = None
 
-'''
-read into df
-drop columns
-sort
-append key field
-group by key
-apply: create drug name, results dictionary
-apply: create column, first row dictionary
-apply: combine dictionaries
-apply: append dictionary to list
-extend lists from all files
-create df from list of dictionaries
-convert NAN to blank
-print df to Excel
-'''
 
 class Extract:
     def __init__(self, dir, sheet_name):
