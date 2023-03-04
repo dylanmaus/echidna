@@ -49,7 +49,7 @@ def main(args):
     tmp_df.columns = ['records']
     flat_df = pd.DataFrame(tmp_df['records'].tolist())
 
-    result = pd.merge(df1, flat_df, on=['key'])
+    result = pd.merge(df1, flat_df, how='left', on=['key'])
 
     result.to_excel('flattened.xlsx', index=False)
 
