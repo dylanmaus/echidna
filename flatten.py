@@ -15,7 +15,6 @@ def col_list(base_cols, k):
     return cols
 
 def flatten_record(df):
-
     # list of dictionaries
     v = df.iloc[:, 1:].to_dict(orient='records')
     # list of lists
@@ -30,7 +29,11 @@ def flatten_record(df):
     # flattened record
     r = dict(zip(h, v))
 
-    return r
+    # include key field
+    df.reset_index(inplace=True)
+    k = {'key': df['key'][0]}
+
+    return {**k, **r}
 
 def main(args):
     df1 = read_excel(args.d1)
@@ -45,18 +48,10 @@ def main(args):
     tmp_df = pd.DataFrame(flat)
     tmp_df.columns = ['records']
     flat_df = pd.DataFrame(tmp_df['records'].tolist())
-    
-    import pdb
-    pdb.set_trace()
 
-    # get max row count from df2
-    max_rows = max(df2.groupby('key').apply(lambda x: x.shape[0]))
-    columns = df2.columns[1:].to_list()
-    columns = col_list(columns, max_rows)
+    result = pd.merge(df1, flat_df, on=['key'])
 
-    # [list(a.values()) for a in df2[df2['key']==1].iloc[:, 1:].to_dict(orient='records')]
-
-
+    result.to_excel('flattened.xlsx', index=False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='transform data')
