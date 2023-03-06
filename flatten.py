@@ -31,7 +31,7 @@ def flatten_record(df):
 
     # include key field
     df.reset_index(inplace=True)
-    k = {'PAT_ENC_CSN_ID': df['PAT_ENC_CSN_ID'][0]}
+    k = {'CSN': df['CSN'][0]}
 
     return {**k, **r}
 
@@ -39,28 +39,28 @@ def sd(df):
     output = []
 
     df.reset_index(inplace=True)
-    t = df['INDEX_CX_DTTM'][0]
-    k = df['PAT_ENC_CSN_ID'][0]
-    n = df['RX_ORDER_NAME'][0]
+    t = df['Index_cx'][0]
+    k = df['CSN'][0]
+    n = df['Rx'][0]
 
     # sum lower dates
-    l = df[df['ORDER_START_DTTM'] < t]
+    l = df[df['Start'] < t]
     if l.shape[0] > 0:
-        l_sum = l['DURATION_IN_DAYS'].sum()
-        a = {'PAT_ENC_CSN_ID': k, 'RX_ORDER_NAME': n, 'ORDER_START_DTTM': 0, 'DURATION_IN_DAYS': l_sum}
+        l_sum = l['DOT'].sum()
+        a = {'CSN': k, 'Rx': n, 'Start': 0, 'DOT': l_sum}
         output.append(a)
 
     # sum greater dates
-    g = df[df['ORDER_START_DTTM'] >= t]
+    g = df[df['Start'] >= t]
     if g.shape[0] > 0:
-        g_sum = g['DURATION_IN_DAYS'].sum()
-        b = {'PAT_ENC_CSN_ID': k, 'RX_ORDER_NAME': n, 'ORDER_START_DTTM': 1, 'DURATION_IN_DAYS': g_sum}
+        g_sum = g['DOT'].sum()
+        b = {'CSN': k, 'Rx': n, 'Start': 1, 'DOT': g_sum}
         output.append(b)
 
     return output
 
 def sum_duration(df):
-    tmp = df.groupby('RX_ORDER_NAME').apply(sd)
+    tmp = df.groupby('Rx').apply(sd)
     tmp.reset_index(drop=True, inplace=True)
     tmp_df = pd.DataFrame(tmp)
     tmp_df.columns = ['records']
@@ -80,12 +80,12 @@ def main(args):
     df1 = read_excel(args.d1)
     df2 = read_excel(args.d2)
 
-    # remove rows if PAT_ENC_CSN_ID not in df1
-    unqique_keys = df1['PAT_ENC_CSN_ID'].unique()
-    df2 = df2[df2['PAT_ENC_CSN_ID'].isin(unqique_keys)]
+    # remove rows if CSN not in df1
+    unqique_keys = df1['CSN'].unique()
+    df2 = df2[df2['CSN'].isin(unqique_keys)]
 
     # sum over duration
-    df2 = df2.groupby('PAT_ENC_CSN_ID').apply(sum_duration)
+    df2 = df2.groupby('CSN').apply(sum_duration)
     df2.reset_index(drop=True, inplace=True)
     df2 = pd.DataFrame(df2)
     df2.columns = ['records']
@@ -97,13 +97,13 @@ def main(args):
     df2 = pd.DataFrame(tmp_list)
     # df2.to_excel('sum_over_duration.xlsx', index=False)
 
-    flat = df2.groupby('PAT_ENC_CSN_ID').apply(flatten_record)
+    flat = df2.groupby('CSN').apply(flatten_record)
     flat.reset_index(drop=True, inplace=True)
     tmp_df = pd.DataFrame(flat)
     tmp_df.columns = ['records']
     flat_df = pd.DataFrame(tmp_df['records'].tolist())
 
-    result = pd.merge(df1, flat_df, how='left', on=['PAT_ENC_CSN_ID'])
+    result = pd.merge(df1, flat_df, how='left', on=['CSN'])
 
     result.to_excel('flattened.xlsx', index=False)
 
