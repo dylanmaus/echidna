@@ -105,7 +105,7 @@ def main(args):
 
     result = pd.merge(df1, flat_df, how='left', on=['CSN'])
 
-    result.to_excel('flattened.xlsx', index=False)
+    result.to_excel('flattened-tmp.xlsx', index=False)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='transform data')
