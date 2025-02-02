@@ -13,9 +13,9 @@ def main(args):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='transform data')
-    parser.add_argument('--f', type=str, required=True, help='path to file with final result dates')
-    parser.add_argument('--g', type=str, required=True, help='path to file with mssa dot data')
+    parser = argparse.ArgumentParser(description="transform data")
+    parser.add_argument("--f", type=str, required=True, help="path to file with final result dates")
+    parser.add_argument("--g", type=str, required=True, help="path to file with mssa dot data")
 
     args = parser.parse_args()
 

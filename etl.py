@@ -29,8 +29,22 @@ class Extract:
 class Transform:
     def __init__(self, data):
         self.transformed_data = []
-        self.sort_columns = ['MRN', 'ORDER', 'ISO. COMM']
-        self.keep_columns = ['ORDER', 'LAST', 'FIRST', 'MRN', 'CDATE', 'WARD', 'SOURCE', 'SITE', 'TEST NAME', 'ORG', 'ISO. COMM', 'Drug Name', 'Drug Result']
+        self.sort_columns = ["MRN", "ORDER", "ISO. COMM"]
+        self.keep_columns = [
+            "ORDER",
+            "LAST",
+            "FIRST",
+            "MRN",
+            "CDATE",
+            "WARD",
+            "SOURCE",
+            "SITE",
+            "TEST NAME",
+            "ORG",
+            "ISO. COMM",
+            "Drug Name",
+            "Drug Result",
+        ]
 
         self.transform(data)
 
@@ -42,11 +56,11 @@ class Transform:
         df.reset_index(drop=True, inplace=True)
 
     def append_key_column(self, df):
-        df['key'] = df['ORDER'].astype(str) + '-' + df['MRN'].astype(str) + '-' + df['ISO. COMM'].astype(str)
+        df["key"] = df["ORDER"].astype(str) + "-" + df["MRN"].astype(str) + "-" + df["ISO. COMM"].astype(str)
 
     def flatten_record(self, df):
-        base_record = df.iloc[:, :11].to_dict(orient='records')[0]
-        drug_record = dict(zip(df['Drug Name'], df['Drug Result']))
+        base_record = df.iloc[:, :11].to_dict(orient="records")[0]
+        drug_record = dict(zip(df["Drug Name"], df["Drug Result"]))
         record = {**base_record, **drug_record}
         return record
 
@@ -55,11 +69,11 @@ class Transform:
             tmp_df = copy.deepcopy(self.drop_columns(df))
             self.sort(tmp_df)
             self.append_key_column(tmp_df)
-            tmp_series = tmp_df.groupby('key').apply(self.flatten_record)
+            tmp_series = tmp_df.groupby("key").apply(self.flatten_record)
             tmp_series.reset_index(drop=True, inplace=True)
             tmp_df = pd.DataFrame(tmp_series)
-            tmp_df.columns = ['records']
-            self.transformed_data.extend(tmp_df['records'].tolist())
+            tmp_df.columns = ["records"]
+            self.transformed_data.extend(tmp_df["records"].tolist())
 
 
 def main(args):
@@ -72,11 +86,11 @@ def main(args):
     df.to_excel(args.output_name, index=False)
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='transform data')
-    parser.add_argument('--data_dir', type=str, required=True, help='directory with data')
-    parser.add_argument('--sheet_name', type=str, default='data', required=False, help='name of sheet with data')
-    parser.add_argument('--output_name', type=str, default='output.xlsx', required=False, help='name of output file')
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="transform data")
+    parser.add_argument("--data_dir", type=str, required=True, help="directory with data")
+    parser.add_argument("--sheet_name", type=str, default="data", required=False, help="name of sheet with data")
+    parser.add_argument("--output_name", type=str, default="output.xlsx", required=False, help="name of output file")
 
     args = parser.parse_args()
 

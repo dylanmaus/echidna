@@ -9,6 +9,6 @@ def excel_to_df(path: str) -> pd.DataFrame:
 
 
 def read_json(path: str) -> None:
-    with open(path, 'r') as f:
+    with open(path, "r") as f:
         data = json.load(f)
     return data
