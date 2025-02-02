@@ -10,7 +10,11 @@ def excel_to_df(path: str) -> pd.DataFrame:
 
 
 def unstack_abx(mssa_dot: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
-    result = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])[first_or_last].min().reset_index(name=first_or_last)
+    if first_or_last == "First_Admin":
+        result = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])[first_or_last].min().reset_index(name=first_or_last)
+    elif first_or_last == "Last_Admin":
+        result = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])[first_or_last].max().reset_index(name=first_or_last)
+
     result.set_index(["PAT_ENC_CSN_ID", "ABX_Category"], inplace=True)
     result = result.unstack(level=-1).rename_axis(None)
     result.reset_index(level=0, drop=False, inplace=True)
@@ -31,7 +35,11 @@ def main(args):
 
     result = pd.merge(first_admin, last_admin)
     result = result[[result.columns[0]] + sorted(result.columns[1:])]
+    result.replace({pd.NaT: None}, inplace=True)
+
     print(result.head())
+
+    result.to_excel("output.xlsx", index=False)
 
 
 if __name__ == "__main__":
