@@ -38,7 +38,6 @@ def main(args):
 
     result = pd.merge(first_admin, last_admin)
     result = result[[result.columns[0]] + sorted(result.columns[1:])]
-    result.replace({pd.NaT: None}, inplace=True)
 
     print(result.head())
 
