@@ -7,7 +7,7 @@ def main(args):
     final_result_dates = excel_to_df(args.f)
     print(final_result_dates.head())
     mssa_dot = excel_to_df(args.g)
-    print(mssa_dot.head())
+    # print(mssa_dot.head())
 
     mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])
 
