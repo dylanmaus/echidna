@@ -23,15 +23,18 @@ def unstack_abx(mssa_dot: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
     return result
 
 
+
 def main(args):
-    final_result_dates = excel_to_df(args.f)
+    # final_result_dates = excel_to_df(args.f)
     mssa_dot = excel_to_df(args.g)
+    mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
+    mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
+    mssa_dot.sort_values(by=["PAT_ENC_CSN_ID", "ABX_Category", "First_Admin"], inplace=True, ascending=True)
+    mssa_dot["delta"] = mssa_dot["First_Admin"] - mssa_dot["Last_Admin"].shift(1)
     print(mssa_dot.head(10))
 
     first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
-    # print(first_admin.head())
     last_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="Last_Admin")
-    # print(last_admin.head())
 
     result = pd.merge(first_admin, last_admin)
     result = result[[result.columns[0]] + sorted(result.columns[1:])]

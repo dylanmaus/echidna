@@ -78,11 +78,11 @@ class Transform:
 
 def main(args):
     extract = Extract(args.data_dir, args.sheet_name)
-    transfrom = Transform(extract.data)
-    records = transfrom.transformed_data
+    transform = Transform(extract.data)
+    records = transform.transformed_data
 
     df = pd.DataFrame(records)
-    transfrom.sort(df)
+    transform.sort(df)
     df.to_excel(args.output_name, index=False)
 
 
