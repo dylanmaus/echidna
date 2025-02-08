@@ -22,35 +22,46 @@ def unstack_abx(mssa_dot: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
 
     return result
 
+
 def assign_course(x):
-    if x["delta"].dt.days < 2:
-        x["course"] = x["course"].shift(1)
+    # x[x["delta"] < 1] = x["init_course"].shift(1)
+    # x[x["delta"] > 1] = x["init_course"].shift(1) + 1
+    # return x
+
+    if x["delta"].item() < 1:
+        return x["init_course"].shift(1)
     else:
-        x["course"] = x["course"].shift(1) + 1
-    return x
+        return x["init_course"].shift(1) + 1
 
 
 def main(args):
     # final_result_dates = excel_to_df(args.f)
     mssa_dot = excel_to_df(args.g)
+    print(mssa_dot.head(10))
     mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
     mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
-    mssa_dot.sort_values(by=["PAT_ENC_CSN_ID", "ABX_Category", "First_Admin"], inplace=True, ascending=True)
-    mssa_dot["delta"] = mssa_dot["First_Admin"] - mssa_dot["Last_Admin"].shift(1)
-    mssa_dot["course"] = 1
+    mssa_dot["delta"] = (
+        mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"], as_index=False)
+        .apply(lambda x: x["First_Admin"].dt.day - x["Last_Admin"].dt.day.shift(1), include_groups=False)
+        .reset_index(drop=True)
+    )
+    mssa_dot["init_course"] = 1
+    mssa_dot["delta"].fillna(0, inplace=True)
+    mssa_dot["course"] = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"], as_index=False).apply(assign_course).reset_index(drop=True)
+    print(mssa_dot.head(10))
     # courses = mssa_dot.groupby(["PAT_ENC_CSN_ID, ABX_Category"]).apply(lambda x: x["course"] == x["course"].shift(1) if x["delta"] < 2)
-    courses = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"]).apply(assign_course, include_groups=False)
-    print(courses.head(10))
+    # courses = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"]).apply(assign_course, include_groups=False)
+    # print(courses.head(10))
 
-    first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
-    last_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="Last_Admin")
+    # first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
+    # last_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="Last_Admin")
 
-    result = pd.merge(first_admin, last_admin)
-    result = result[[result.columns[0]] + sorted(result.columns[1:])]
+    # result = pd.merge(first_admin, last_admin)
+    # result = result[[result.columns[0]] + sorted(result.columns[1:])]
 
-    print(result.head())
+    # print(result.head())
 
-    result.to_excel("output.xlsx", index=False)
+    # result.to_excel("output.xlsx", index=False)
 
 
 if __name__ == "__main__":
