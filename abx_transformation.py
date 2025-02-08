@@ -22,6 +22,12 @@ def unstack_abx(mssa_dot: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
 
     return result
 
+def assign_course(x):
+    if x["delta"].dt.days < 2:
+        x["course"] = x["course"].shift(1)
+    else:
+        x["course"] = x["course"].shift(1) + 1
+    return x
 
 
 def main(args):
@@ -31,7 +37,10 @@ def main(args):
     mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
     mssa_dot.sort_values(by=["PAT_ENC_CSN_ID", "ABX_Category", "First_Admin"], inplace=True, ascending=True)
     mssa_dot["delta"] = mssa_dot["First_Admin"] - mssa_dot["Last_Admin"].shift(1)
-    print(mssa_dot.head(10))
+    mssa_dot["course"] = 1
+    # courses = mssa_dot.groupby(["PAT_ENC_CSN_ID, ABX_Category"]).apply(lambda x: x["course"] == x["course"].shift(1) if x["delta"] < 2)
+    courses = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"]).apply(assign_course, include_groups=False)
+    print(courses.head(10))
 
     first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
     last_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="Last_Admin")
