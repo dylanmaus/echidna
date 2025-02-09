@@ -27,9 +27,13 @@ def unstack_abx(mssa_dot: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
 def main(args):
     # final_result_dates = excel_to_df(args.f)
     mssa_dot = excel_to_df(args.g)
-    print(mssa_dot.head(14))
+    mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
+    mssa_dot["First_Admin"] = mssa_dot["First_Admin"].dt.date
     mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
     mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
+    mssa_dot["Last_Admin"] = mssa_dot["Last_Admin"].dt.date
+    mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
+    print(mssa_dot.head(14))
 
     mssa_dot["delta"] = (
         mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"], as_index=False)
