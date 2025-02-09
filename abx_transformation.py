@@ -1,5 +1,6 @@
 import argparse
 import pandas as pd
+import numpy as np
 
 
 def excel_to_df(path: str) -> pd.DataFrame:
@@ -11,11 +12,11 @@ def excel_to_df(path: str) -> pd.DataFrame:
 
 def unstack_abx(mssa_dot: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
     if first_or_last == "First_Admin":
-        result = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])[first_or_last].min().reset_index(name=first_or_last)
+        result = mssa_dot.groupby(["PAT_ENC_CSN_ID", "category"])[first_or_last].min().reset_index(name=first_or_last)
     elif first_or_last == "Last_Admin":
-        result = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])[first_or_last].max().reset_index(name=first_or_last)
+        result = mssa_dot.groupby(["PAT_ENC_CSN_ID", "category"])[first_or_last].max().reset_index(name=first_or_last)
 
-    result.set_index(["PAT_ENC_CSN_ID", "ABX_Category"], inplace=True)
+    result.set_index(["PAT_ENC_CSN_ID", "category"], inplace=True)
     result = result.unstack(level=-1).rename_axis(None)
     result.reset_index(level=0, drop=False, inplace=True)
     result.columns = ["PAT_ENC_CSN_ID"] + [f"{x[1]}_{first_or_last[0]}A" for x in result.columns.tolist()[1:]]
@@ -23,45 +24,42 @@ def unstack_abx(mssa_dot: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
     return result
 
 
-def assign_course(x):
-    # x[x["delta"] < 1] = x["init_course"].shift(1)
-    # x[x["delta"] > 1] = x["init_course"].shift(1) + 1
-    # return x
-
-    if x["delta"].item() < 1:
-        return x["init_course"].shift(1)
-    else:
-        return x["init_course"].shift(1) + 1
-
-
 def main(args):
     # final_result_dates = excel_to_df(args.f)
     mssa_dot = excel_to_df(args.g)
-    print(mssa_dot.head(10))
+    print(mssa_dot.head(14))
     mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
     mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
+
     mssa_dot["delta"] = (
         mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"], as_index=False)
         .apply(lambda x: x["First_Admin"].dt.day - x["Last_Admin"].dt.day.shift(1), include_groups=False)
         .reset_index(drop=True)
     )
-    mssa_dot["init_course"] = 1
-    mssa_dot["delta"].fillna(0, inplace=True)
-    mssa_dot["course"] = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"], as_index=False).apply(assign_course).reset_index(drop=True)
-    print(mssa_dot.head(10))
-    # courses = mssa_dot.groupby(["PAT_ENC_CSN_ID, ABX_Category"]).apply(lambda x: x["course"] == x["course"].shift(1) if x["delta"] < 2)
-    # courses = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"]).apply(assign_course, include_groups=False)
-    # print(courses.head(10))
+    mssa_dot.replace({"delta": {1: 0}}, inplace=True)
+    mssa_dot.fillna({"delta": 1}, inplace=True)
+    mssa_dot.loc[mssa_dot["delta"] > 1, "delta"] = 1
+    mssa_dot.replace(0, np.nan, inplace=True)
 
-    # first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
-    # last_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="Last_Admin")
+    mssa_dot["course"] = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category", "delta"]).cumcount()
 
-    # result = pd.merge(first_admin, last_admin)
-    # result = result[[result.columns[0]] + sorted(result.columns[1:])]
+    mssa_dot.ffill(inplace=True)
 
-    # print(result.head())
+    mssa_dot["course"] += 1
+    mssa_dot["course"] = mssa_dot["course"].astype(int)
+    mssa_dot["category"] = mssa_dot["ABX_Category"] + "_" + mssa_dot["course"].astype(str)
 
-    # result.to_excel("output.xlsx", index=False)
+    # print(mssa_dot.head(15))
+
+    first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
+    last_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="Last_Admin")
+
+    result = pd.merge(first_admin, last_admin)
+    result = result[[result.columns[0]] + sorted(result.columns[1:])]
+
+    print(result.head(15))
+
+    result.to_excel("output.xlsx", index=False)
 
 
 if __name__ == "__main__":
