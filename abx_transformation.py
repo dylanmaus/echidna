@@ -45,8 +45,13 @@ def main(args):
     # keep earliest date per CSN in final result dates
     earliest_final_result_dates = final_result_dates.loc[final_result_dates.groupby("CSN")["Final_Result_Date"].idxmin()]
 
+    # join mssa data and final result dates
+    earliest_final_result_dates.rename(columns={"CSN": "PAT_ENC_CSN_ID"}, inplace=True)
+    mssa_dot = mssa_dot.merge(earliest_final_result_dates)
+
     # remove admins that entirely occur before the final result date
-    # mssa_dot = mssa_dot[mssa_dot["Last_Admin"] >= ]
+    mssa_dot = mssa_dot[mssa_dot["Last_Admin"] >= mssa_dot["Final_Result_Date"]]
+    mssa_dot.reset_index(inplace=True, drop=True)
 
     # calculate deltas between rows to find boundaries between courses
     mssa_dot["prev_delta"] = (
@@ -68,14 +73,12 @@ def main(args):
     # label each abx course
     mssa_dot["category"] = mssa_dot["ABX_Category"] + "_" + mssa_dot["course"].astype(str)
 
-
+    # compute total days of therapy for each drug
     mssa_dot["admin_delta"] = mssa_dot["Last_Admin"] - mssa_dot["First_Admin"]
     mssa_dot.replace({"admin_delta": {pd.Timedelta("0 days"): pd.Timedelta("1 days")}}, inplace=True)
+    abx_dot = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])["admin_delta"].sum().reset_index(name="abx_dot")
 
-
-    # mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category", "course"])("admin_delta").sum()
-
-    print(mssa_dot.head(15))
+    print(abx_dot.head(abx_dot.shape[0]))
 
     # display each CSNs data on a single row
     first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
