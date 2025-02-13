@@ -1,7 +1,8 @@
 import argparse
-import pandas as pd
-import numpy as np
 from datetime import timedelta
+
+import numpy as np
+import pandas as pd
 
 
 class Graph:
@@ -100,12 +101,19 @@ def expand_dates(df: pd.DataFrame):
 def assign_courses(df: pd.DataFrame):
     expanded_dates = expand_dates(df=df)
 
-    for date in expanded_dates:
-        print(date)
     graph = build_graph(data=expanded_dates)
     components = dfs_iterative(graph=graph)
 
-    return components
+    components.sort(key=lambda x: min(x))
+
+    output = []
+    for i, component in enumerate(components):
+        first_admin = min(component)
+        last_admin = max(component)
+        dot = last_admin - first_admin + timedelta(days=1)
+        output.append({"First_Admin": first_admin, "Last_Admin": last_admin, "Course": i + 1, "DOT": dot})
+
+    return pd.DataFrame(data=output)
 
 
 def excel_to_df(path: str) -> pd.DataFrame:
@@ -158,7 +166,9 @@ def main(args):
     mssa_dot.reset_index(inplace=True, drop=True)
     print(mssa_dot.head(mssa_dot.shape[0]))
 
-    assign_courses(mssa_dot)
+    abx_courses = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"]).apply(assign_courses, include_groups=False).reset_index()
+    abx_courses["DOT"] = abx_courses["DOT"].dt.days
+    print(abx_courses.head(abx_courses.shape[0]))
 
     # calculate deltas between rows for each abx group to find boundaries between abx courses
     mssa_dot.sort_values(by=["PAT_ENC_CSN_ID", "ABX_Category", "First_Admin"], ascending=True, inplace=True)
@@ -180,15 +190,15 @@ def main(args):
 
     # calculate deltas between rows ignoring the specific abx to find boundaries between courses of any abx
     mssa_dot.sort_values(by=["PAT_ENC_CSN_ID", "First_Admin"], ascending=True, inplace=True)
-    print(mssa_dot.head(mssa_dot.shape[0]))
+    # print(mssa_dot.head(mssa_dot.shape[0]))
 
     mssa_dot["any_delta"] = (
         mssa_dot.groupby(["PAT_ENC_CSN_ID"], as_index=False)
         .apply(lambda x: x["First_Admin"].dt.day - x["Last_Admin"].dt.day.shift(1), include_groups=False)
         .reset_index(drop=True)
     )
-    print("post any delta")
-    print(mssa_dot.head(mssa_dot.shape[0]))
+    # print("post any delta")
+    # print(mssa_dot.head(mssa_dot.shape[0]))
 
     # assign each admin to a course ignoring the specific abx
     mssa_dot.replace({"any_delta": {1: 0}}, inplace=True)
@@ -202,7 +212,7 @@ def main(args):
 
     # label each abx abx course
     mssa_dot["category"] = mssa_dot["ABX_Category"] + "_" + mssa_dot["abx_course"].astype(str)
-    print(mssa_dot.head(mssa_dot.shape[0]))
+    # print(mssa_dot.head(mssa_dot.shape[0]))
 
     # compute total days of therapy for each drug
     abx_dot = (
@@ -211,7 +221,7 @@ def main(args):
         .reset_index(name="dot")
     )
     abx_dot["dot"] += pd.Timedelta("1 days")
-    print(abx_dot.head(mssa_dot.shape[0]))
+    # print(abx_dot.head(mssa_dot.shape[0]))
 
     # compute total days of therapy for any drug
     any_dot = (
@@ -220,7 +230,7 @@ def main(args):
         .reset_index(name="dot")
     )
     any_dot["dot"] += pd.Timedelta("1 days")
-    print(any_dot.head(any_dot.shape[0]))
+    # print(any_dot.head(any_dot.shape[0]))
 
     # display each CSNs data on a single row
     first_admin = unstack_abx(mssa_dot=mssa_dot, first_or_last="First_Admin")
@@ -228,7 +238,7 @@ def main(args):
     result = pd.merge(first_admin, last_admin)
     result = result[[result.columns[0]] + sorted(result.columns[1:])]
 
-    print(result.head(15))
+    # print(result.head(15))
 
     # create excel file
     result.to_excel("output.xlsx", index=False)
