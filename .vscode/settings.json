@@ -4,6 +4,7 @@
         "ffill",
         "fillna",
         "idxmin",
-        "mssa"
+        "mssa",
+        "venv"
     ]
 }
