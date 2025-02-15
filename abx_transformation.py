@@ -183,15 +183,22 @@ def main(args):
     total_dot = any_abx_courses.groupby("PAT_ENC_CSN_ID")["DOT"].sum().reset_index(name="Total_DOT")
     print(total_dot.head())
 
-    # display each PTs data on a single row
-    first_admin = unstack_abx(df=abx_courses, first_or_last="First_Admin")
-    last_admin = unstack_abx(df=abx_courses, first_or_last="Last_Admin")
-    result = pd.merge(first_admin, last_admin)
-    result = result[[result.columns[0]] + sorted(result.columns[1:])]
+    # unstack
+    result = abx_dot.set_index(["PAT_ENC_CSN_ID", "ABX_Category"])
+    # result = result[[first_or_last]]
+    result = result.unstack(level=-1).rename_axis(None)
+    result.reset_index(level=0, drop=False, inplace=True)
+    result.columns = ["PAT_ENC_CSN_ID"] + [x[1] for x in result.columns.tolist()[1:]]
+
+    # # display each PTs data on a single row
+    # first_admin = unstack_abx(df=abx_courses, first_or_last="First_Admin")
+    # last_admin = unstack_abx(df=abx_courses, first_or_last="Last_Admin")
+    # result = pd.merge(first_admin, last_admin)
+    # result = result[[result.columns[0]] + sorted(result.columns[1:])]
     print(result.head())
 
     # create excel file
-    result.to_excel("output.xlsx", index=False)
+    # result.to_excel("output.xlsx", index=False)
 
 
 if __name__ == "__main__":
