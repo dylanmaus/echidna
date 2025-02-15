@@ -134,10 +134,10 @@ def unstack_abx(df: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
 
 
 def assign_abx_group(df: pd.DataFrame) -> None:
-    group_one = ["Cefepime"]
+    group_zero = ["Cefazolin", "Nafcillin", "Oxacillin"]
 
-    df["Group"] = 2
-    df.loc[df["ABX_Category"].isin(group_one), "Group"] = 1
+    df["Group"] = 1
+    df.loc[df["ABX_Category"].isin(group_zero), "Group"] = 0
 
 
 def main(args):
@@ -164,18 +164,18 @@ def main(args):
     mssa_dot.reset_index(inplace=True, drop=True)
 
     # remove times for easier readability
-    mssa_dot["First_Admin"] = mssa_dot["First_Admin"].dt.date
-    mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
-    mssa_dot["Last_Admin"] = mssa_dot["Last_Admin"].dt.date
-    mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
-    mssa_dot["Final_Result_Date"] = mssa_dot["Final_Result_Date"].dt.date
-    mssa_dot["Final_Result_Date"] = pd.to_datetime(mssa_dot["Final_Result_Date"])
+    # mssa_dot["First_Admin"] = mssa_dot["First_Admin"].dt.date
+    # mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
+    # mssa_dot["Last_Admin"] = mssa_dot["Last_Admin"].dt.date
+    # mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
+    # mssa_dot["Final_Result_Date"] = mssa_dot["Final_Result_Date"].dt.date
+    # mssa_dot["Final_Result_Date"] = pd.to_datetime(mssa_dot["Final_Result_Date"])
 
     print(mssa_dot.head(mssa_dot.shape[0]))
 
     # find last admin date
     last_admin = mssa_dot.groupby("PAT_ENC_CSN_ID")["Last_Admin"].max().reset_index()
-    print(last_admin.head())
+    # print(last_admin.head())
 
     # group each admin of abx into courses
     abx_courses = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"]).apply(assign_courses, include_groups=False).reset_index()
@@ -186,7 +186,7 @@ def main(args):
 
     # find total days of therapy for each drug
     abx_dot = abx_courses.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])["DOT"].sum().reset_index(name="ABX_DOT")
-    print(abx_dot.head())
+    # print(abx_dot.head())
 
     # find drug with longest days of therapy
     max_abx_dot = (
@@ -197,7 +197,7 @@ def main(args):
 
     # assign group
     assign_abx_group(max_abx_dot)
-    print(max_abx_dot.head())
+    # print(max_abx_dot.head())
 
     # group contiguous admins of any drug by course
     any_abx_courses = mssa_dot.groupby(["PAT_ENC_CSN_ID"]).apply(assign_courses, include_groups=False).reset_index()
@@ -205,18 +205,19 @@ def main(args):
 
     # find total days of therapy
     total_dot = any_abx_courses.groupby("PAT_ENC_CSN_ID")["DOT"].sum().reset_index(name="Total_DOT")
-    print(total_dot.head())
+    # print(total_dot.head())
 
     # unstack
     unstack_abx_dot = abx_dot.set_index(["PAT_ENC_CSN_ID", "ABX_Category"])
     unstack_abx_dot = unstack_abx_dot.unstack(level=-1).rename_axis(None)
     unstack_abx_dot.reset_index(level=0, drop=False, inplace=True)
     unstack_abx_dot.columns = ["PAT_ENC_CSN_ID"] + [x[1] for x in unstack_abx_dot.columns.tolist()[1:]]
-    print(unstack_abx_dot.head())
+    # print(unstack_abx_dot.head())
 
     # merge intermediary results into final result
     result = pd.merge(unstack_abx_dot, max_abx_dot[["PAT_ENC_CSN_ID", "Group"]])
     result = pd.merge(result, total_dot)
+    result = pd.merge(result, last_admin)
     print(result.head())
 
     # create excel file
