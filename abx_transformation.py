@@ -80,6 +80,7 @@ def expand_dates(df: pd.DataFrame):
         if previous_day in end_dates:
             pairs.append((previous_day, date))
 
+    # create intermediate date pairs
     expanded = []
     for start_date, end_date in pairs:
         if start_date == end_date:
@@ -132,6 +133,13 @@ def unstack_abx(df: pd.DataFrame, first_or_last: str) -> pd.DataFrame:
     return result
 
 
+def assign_abx_group(df: pd.DataFrame) -> None:
+    group_one = ["Cefepime"]
+
+    df["Group"] = 2
+    df.loc[df["ABX_Category"].isin(group_one), "Group"] = 1
+
+
 def main(args):
     # read in files to DataFrames
     final_result_dates = excel_to_df(args.f)
@@ -151,6 +159,7 @@ def main(args):
 
     # remove admins that entirely occur before the final result date
     mssa_dot = mssa_dot[mssa_dot["Last_Admin"] >= mssa_dot["Final_Result_Date"]]
+    # truncate admin window to begin at final result date
     mssa_dot.loc[mssa_dot["First_Admin"] < mssa_dot["Final_Result_Date"], "First_Admin"] = mssa_dot["Final_Result_Date"]
     mssa_dot.reset_index(inplace=True, drop=True)
 
@@ -164,6 +173,10 @@ def main(args):
 
     print(mssa_dot.head(mssa_dot.shape[0]))
 
+    # find last admin date
+    last_admin = mssa_dot.groupby("PAT_ENC_CSN_ID")["Last_Admin"].max().reset_index()
+    print(last_admin.head())
+
     # group each admin of abx into courses
     abx_courses = mssa_dot.groupby(["PAT_ENC_CSN_ID", "ABX_Category"]).apply(assign_courses, include_groups=False).reset_index()
     abx_courses["DOT"] = abx_courses["DOT"].dt.days
@@ -175,6 +188,17 @@ def main(args):
     abx_dot = abx_courses.groupby(["PAT_ENC_CSN_ID", "ABX_Category"])["DOT"].sum().reset_index(name="ABX_DOT")
     print(abx_dot.head())
 
+    # find drug with longest days of therapy
+    max_abx_dot = (
+        abx_dot.groupby("PAT_ENC_CSN_ID")[[x for x in abx_dot.columns.tolist()]]
+        .apply(lambda x: x[x["ABX_DOT"] == x["ABX_DOT"].max()])
+        .reset_index(drop=True)
+    )
+
+    # assign group
+    assign_abx_group(max_abx_dot)
+    print(max_abx_dot.head())
+
     # group contiguous admins of any drug by course
     any_abx_courses = mssa_dot.groupby(["PAT_ENC_CSN_ID"]).apply(assign_courses, include_groups=False).reset_index()
     any_abx_courses["DOT"] = any_abx_courses["DOT"].dt.days
@@ -184,21 +208,19 @@ def main(args):
     print(total_dot.head())
 
     # unstack
-    result = abx_dot.set_index(["PAT_ENC_CSN_ID", "ABX_Category"])
-    # result = result[[first_or_last]]
-    result = result.unstack(level=-1).rename_axis(None)
-    result.reset_index(level=0, drop=False, inplace=True)
-    result.columns = ["PAT_ENC_CSN_ID"] + [x[1] for x in result.columns.tolist()[1:]]
+    unstack_abx_dot = abx_dot.set_index(["PAT_ENC_CSN_ID", "ABX_Category"])
+    unstack_abx_dot = unstack_abx_dot.unstack(level=-1).rename_axis(None)
+    unstack_abx_dot.reset_index(level=0, drop=False, inplace=True)
+    unstack_abx_dot.columns = ["PAT_ENC_CSN_ID"] + [x[1] for x in unstack_abx_dot.columns.tolist()[1:]]
+    print(unstack_abx_dot.head())
 
-    # # display each PTs data on a single row
-    # first_admin = unstack_abx(df=abx_courses, first_or_last="First_Admin")
-    # last_admin = unstack_abx(df=abx_courses, first_or_last="Last_Admin")
-    # result = pd.merge(first_admin, last_admin)
-    # result = result[[result.columns[0]] + sorted(result.columns[1:])]
+    # merge intermediary results into final result
+    result = pd.merge(unstack_abx_dot, max_abx_dot[["PAT_ENC_CSN_ID", "Group"]])
+    result = pd.merge(result, total_dot)
     print(result.head())
 
     # create excel file
-    # result.to_excel("output.xlsx", index=False)
+    result.to_excel("output.xlsx", index=False)
 
 
 if __name__ == "__main__":
