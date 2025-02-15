@@ -151,6 +151,7 @@ def main(args):
 
     # remove admins that entirely occur before the final result date
     mssa_dot = mssa_dot[mssa_dot["Last_Admin"] >= mssa_dot["Final_Result_Date"]]
+    mssa_dot.loc[mssa_dot["First_Admin"] < mssa_dot["Final_Result_Date"], "First_Admin"] = mssa_dot["Final_Result_Date"]
     mssa_dot.reset_index(inplace=True, drop=True)
 
     # remove times for easier readability
