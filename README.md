@@ -9,5 +9,5 @@ pip install -r requirements.txt
 
 ## ABX Transformation
 ```
-python abx_transformation.py --f final_result_dates.xlsx --g mssa_dot_test.xlsx
+python abx_transformation.py --f mssa_fin.xlsx --g mssa_dot.xlsx --h mssa_dem.xlsx
 ```
