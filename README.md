@@ -15,13 +15,13 @@ pip install -r requirements.txt
 
 ## ABX Transformation
 
-# Run
+## Run
 Replace file names with actual names
 ```
 python abx_transformation.py --f mssa_fin.xlsx --g mssa_dot.xlsx --h mssa_dem.xlsx
 ```
 
-# Output
+## Output
 ```
 output.xlsx
 ```
