@@ -168,12 +168,12 @@ def main(args):
     mssa_dot.reset_index(inplace=True, drop=True)
 
     # remove times for easier readability
-    mssa_dot["First_Admin"] = mssa_dot["First_Admin"].dt.date
-    mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
-    mssa_dot["Last_Admin"] = mssa_dot["Last_Admin"].dt.date
-    mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
-    mssa_dot["Final_Result_Date"] = mssa_dot["Final_Result_Date"].dt.date
-    mssa_dot["Final_Result_Date"] = pd.to_datetime(mssa_dot["Final_Result_Date"])
+    # mssa_dot["First_Admin"] = mssa_dot["First_Admin"].dt.date
+    # mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
+    # mssa_dot["Last_Admin"] = mssa_dot["Last_Admin"].dt.date
+    # mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
+    # mssa_dot["Final_Result_Date"] = mssa_dot["Final_Result_Date"].dt.date
+    # mssa_dot["Final_Result_Date"] = pd.to_datetime(mssa_dot["Final_Result_Date"])
 
     print(mssa_dot.head(mssa_dot.shape[0]))
 
@@ -213,7 +213,7 @@ def main(args):
     result = pd.merge(result, total_dot, on="CSN")
     result = pd.merge(result, last_admin, on="CSN")
     result = pd.merge(mssa_dem, result, on="CSN")
-    print(result.head())
+    print(result.head(result.shape[0]))
 
     # create excel file
     result.to_excel("output.xlsx", index=False)
