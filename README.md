@@ -16,7 +16,6 @@ pip install -r requirements.txt
 ## ABX Transformation
 
 ### Run
-Replace file names with actual names
 ```
 python abx_transformation.py --fin mssa_fin.xlsx --dot mssa_dot.xlsx --dem mssa_dem.xlsx --hrs 72
 ```
