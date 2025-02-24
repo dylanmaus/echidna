@@ -18,7 +18,7 @@ pip install -r requirements.txt
 ### Run
 Replace file names with actual names
 ```
-python abx_transformation.py --f mssa_fin.xlsx --g mssa_dot.xlsx --h mssa_dem.xlsx
+python abx_transformation.py --fin mssa_fin.xlsx --dot mssa_dot.xlsx --dem mssa_dem.xlsx --hrs 72
 ```
 
 ### Output

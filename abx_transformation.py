@@ -142,29 +142,52 @@ def assign_abx_group(df: pd.DataFrame) -> None:
 
 def main(args):
     # read in files to DataFrames
-    mssa_fin = excel_to_df(args.f)
-    mssa_dot = excel_to_df(args.g)
-    mssa_dem = excel_to_df(args.h)
+    mssa_fin = excel_to_df(args.fin)
+    mssa_dot = excel_to_df(args.dot)
+    mssa_dem = excel_to_df(args.dem)
 
     # convert date columns
     mssa_fin["Final_Result_Date"] = pd.to_datetime(mssa_fin["Final_Result_Date"])
     mssa_dot["First_Admin"] = pd.to_datetime(mssa_dot["First_Admin"])
     mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
-
-    # keep earliest date per CSN in final result dates
-    earliest_mssa_fin = mssa_fin.loc[mssa_fin.groupby("CSN")["Final_Result_Date"].idxmin()]
-
-    # join mssa dot and final result dates
-    mssa_dot = mssa_dot.merge(earliest_mssa_fin, on="CSN")
+    mssa_dem["Index_Culture"] = pd.to_datetime(mssa_dem["Index_Culture"])
 
     # remove ampicillin, amoxicillin, penicillin
     abx_ignore = ["Ampicillin", "Amoxicillin", "Penicillin"]
     mssa_dot = mssa_dot[~mssa_dot["ABX_Category"].isin(abx_ignore)]
 
+    # keep earliest date per CSN in final result dates
+    earliest_mssa_fin = mssa_fin.loc[mssa_fin.groupby("CSN")["Final_Result_Date"].idxmin()]
+
+    # join index culture date to mssa dot
+    mssa_dot = mssa_dot.merge(mssa_dem[["CSN", "Index_Culture"]], on="CSN", how="left")
+
+    # add column with index culture plus offset to mssa_dot for processing
+    index_culture_plus = f"Index_Culture + {args.hrs} hrs"
+    mssa_dot[index_culture_plus] = mssa_dot["Index_Culture"] + timedelta(hours=args.hrs)
+
+    # add column with index culture plus offset to mssa_dem for display
+    index_culture_index = mssa_dem.columns.get_loc("Index_Culture")
+    mssa_dem.insert(index_culture_index + 1, index_culture_plus, mssa_dem["Index_Culture"] + timedelta(hours=args.hrs))
+
+    # add column with final result date to mssa_dem for display
+    mssa_dem = mssa_dem.merge(earliest_mssa_fin, on="CSN")
+    # move final result date near index culture date
+    mssa_dem.rename(columns={"Final_Result_Date": "fin_tmp"}, inplace=True)
+    mssa_dem.insert(index_culture_index + 2, "Final_Result_Date", mssa_dem["fin_tmp"])
+    mssa_dem.drop(columns=["fin_tmp"], inplace=True)
+    # final result date - index culture + hour offset
+    mssa_dem.insert(
+        index_culture_index + 3, f"Final_Result - Index_Culture + {args.hrs} (hrs)", mssa_dem["Final_Result_Date"] - mssa_dem[index_culture_plus]
+    )
+    mssa_dem[f"Final_Result - Index_Culture + {args.hrs} (hrs)"] = (
+        mssa_dem[f"Final_Result - Index_Culture + {args.hrs} (hrs)"].dt.total_seconds() / 3600
+    )
+
     # remove admins that entirely occur before the final result date
-    mssa_dot = mssa_dot[mssa_dot["Last_Admin"] >= mssa_dot["Final_Result_Date"]]
+    mssa_dot = mssa_dot[mssa_dot["Last_Admin"] >= mssa_dot[index_culture_plus]]
     # truncate admin window to begin at final result date
-    mssa_dot.loc[mssa_dot["First_Admin"] < mssa_dot["Final_Result_Date"], "First_Admin"] = mssa_dot["Final_Result_Date"]
+    mssa_dot.loc[mssa_dot["First_Admin"] < mssa_dot[index_culture_plus], "First_Admin"] = mssa_dot[index_culture_plus]
     mssa_dot.reset_index(inplace=True, drop=True)
 
     # remove times for easier readability
@@ -174,8 +197,8 @@ def main(args):
     # mssa_dot["Last_Admin"] = pd.to_datetime(mssa_dot["Last_Admin"])
     # mssa_dot["Final_Result_Date"] = mssa_dot["Final_Result_Date"].dt.date
     # mssa_dot["Final_Result_Date"] = pd.to_datetime(mssa_dot["Final_Result_Date"])
-
-    print(mssa_dot.head(mssa_dot.shape[0]))
+    # mssa_dem["Index_Culture"] = mssa_dem["Index_Culture"].dt.date
+    # mssa_dem["Index_Culture"] = pd.to_datetime(mssa_dem["Index_Culture"])
 
     # find last admin date
     last_admin = mssa_dot.groupby("CSN")["Last_Admin"].max().reset_index()
@@ -221,9 +244,10 @@ def main(args):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="transform data")
-    parser.add_argument("--f", type=str, required=True, help="path to file with final result dates")
-    parser.add_argument("--g", type=str, required=True, help="path to file with mssa dot data")
-    parser.add_argument("--h", type=str, required=True, help="path to file with mssa dem data")
+    parser.add_argument("--fin", type=str, required=True, help="path to file with final result dates")
+    parser.add_argument("--dot", type=str, required=True, help="path to file with mssa dot data")
+    parser.add_argument("--dem", type=str, required=True, help="path to file with mssa dem data")
+    parser.add_argument("--hrs", type=int, required=True, help="time in hours added to index culture date")
 
     args = parser.parse_args()
 
